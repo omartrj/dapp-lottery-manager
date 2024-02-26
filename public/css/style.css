@@ -249,7 +249,7 @@ a:hover {
 }
 
 #search-lottery-button {
-  background-image: url("/public/img/search-icon.svg");
+  background-image: url("../img/search-icon.svg");
   background-size: 20px;
   background-repeat: no-repeat;
   background-position: center;
