@@ -364,6 +364,8 @@ async function login() {
     const addressButton = document.querySelector('#address-button');
     addressButton.setAttribute('data-content', currentAddress);
     addressButton.querySelector('span').textContent = shortenHex(currentAddress);
+    // Update title
+    document.head.querySelector('title').textContent = `Lottery Manager - ${shortenHex(currentAddress)}`;
     show('account-view', 'login-view');
     closeDialog();
 }
@@ -371,6 +373,7 @@ async function login() {
 async function logout() {
     currentAddress = null;
     document.querySelectorAll('input').forEach(input => input.value = '');
+    document.head.querySelector('title').textContent = 'Lottery Manager - Login';
     show('login-view', 'account-view');
 }
 
