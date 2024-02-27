@@ -74,9 +74,35 @@ a:hover {
   font-size: 20px;
 }
 
+#login-view #logo {
+  cursor: pointer;
+  border-radius: 50%;
+  margin: auto;
+  transition: scale 0.3s;
+}
+
+#login-view #logo:hover {
+  scale: 1.05;
+}
+
+#login-view #logo.clicked {
+  animation: spin-lottery 1.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes spin-lottery {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(1080deg);
+  }
+}
+
 #login-button {
   font-size: 20px;
   font-weight: 400;
+  width: 70%;
+  border-radius: 35px;
 }
 
 #login-view .footer-links {
@@ -559,6 +585,9 @@ dialog[open] {
 }
 
 @keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
   100% {
     transform: rotate(360deg);
   }

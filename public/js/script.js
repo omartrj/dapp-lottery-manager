@@ -1030,6 +1030,14 @@ function getState(lottery) {
     return 'CANCELLED';
 }
 
+function spinLogo() {
+    var logo = document.getElementById('logo');
+    logo.classList.add('clicked');
+    setTimeout(function () {
+        logo.classList.remove('clicked');
+    }, 1700);
+}
+
 let interval;
 async function refreshLotteries() {
     let updated = false;
