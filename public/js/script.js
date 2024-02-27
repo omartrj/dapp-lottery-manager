@@ -355,8 +355,18 @@ async function login() {
         spinner: true,
     });
     // Request account access
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    currentAddress = accounts[0];
+    try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        currentAddress = accounts[0];
+    } catch (error) {
+        //No metamask installed
+        showDialog({
+            title: 'Error',
+            message: 'You must have Metamask installed and unlocked to use this website',
+            closable: true,
+        });
+        return;
+    }
     // Refresh user lotteries
     await refreshUserLotteries();
     // Update UI
