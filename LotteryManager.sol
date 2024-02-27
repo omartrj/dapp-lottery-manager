@@ -62,6 +62,10 @@ contract LotteryManager {
     /// @dev The key is the address of the user
     mapping(address => LotteryList) userLotteries;
 
+    /// @notice The nonce used to generate random numbers
+    /// @dev The nonce is incremented every time a external function is called
+    uint256 private nonce = 0;
+
 
     /// @notice Emitted when a new lottery is created, with the hash of the lottery
     event LotteryCreated(bytes32 indexed lotteryHash, address indexed manager);
@@ -100,6 +104,7 @@ contract LotteryManager {
         userLotteries[msg.sender].created.push(lotteryHash);
 
         emit LotteryCreated(lotteryHash, msg.sender);
+        incrementNonce();
     }
 
     /// @notice Buys tickets for a lottery
@@ -123,6 +128,7 @@ contract LotteryManager {
         userLotteries[msg.sender].entered.push(_lotteryHash);
 
         emit TicketBought(_lotteryHash, msg.sender, _tickets);
+        incrementNonce();
     }
 
     /// @notice Ends a lottery and selects a winner
@@ -136,6 +142,7 @@ contract LotteryManager {
         if (lotteries[_lotteryHash].ticketCount == 0) {
             lotteries[_lotteryHash].state = State.CANCELLED;
             emit LotteryCancelled(_lotteryHash);
+            incrementNonce();
             return;
         }
 
@@ -158,6 +165,7 @@ contract LotteryManager {
         lotteries[_lotteryHash].state = State.ENDED;
 
         emit LotteryEnded(_lotteryHash, lotteries[_lotteryHash].winner, winnerPrize);
+        incrementNonce();
     }
 
     /// @notice Cancels a lottery
@@ -176,6 +184,7 @@ contract LotteryManager {
         }
 
         emit LotteryCancelled(_lotteryHash);
+        incrementNonce();
     }
 
     /// @notice Returns the lotteries created and entered by an address
@@ -225,11 +234,21 @@ contract LotteryManager {
         return (managerPrize, winnerPrize);
     }
 
+    /// @notice Increments the nonce
+    /// @dev If the nonce is equal to 2^256 - 1, it is reset to 0 to avoid overflow
+    function incrementNonce() private {
+        if (nonce == 2**256 - 1) {
+            nonce = 0;
+        } else {
+            nonce++;
+        }
+    }
+
     /// @notice Generate a random number
     /// @return rand The random number
-    /// @dev The random number is generated using the current block timestamp, the previous block's random number, and the sender's address
+    /// @dev The random number is generated using the current timestamp, the nonce and the sender's address
     function random() private view returns (uint256 rand) {
-        return uint256(sha256(abi.encodePacked(block.timestamp, block.prevrandao, msg.sender)));
+        return uint256(keccak256(abi.encodePacked(block.timestamp, nonce, msg.sender)));
     }
 
 
