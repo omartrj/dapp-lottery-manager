@@ -348,6 +348,9 @@ const contract = new web3.eth.Contract(contractJsonInterface, contractAddress);
 
 let currentAddress = null;
 
+/**********************/
+/*  LOGIN AND LOGOUT  */
+/**********************/
 async function login() {
     showDialog({
         title: 'Login in progress',
@@ -387,6 +390,9 @@ async function logout() {
     show('login-view', 'account-view');
 }
 
+/******************/
+/*  GET LOTTERY   */
+/******************/
 async function getLottery(lotteryHash) {
     if (!lotteryHash.startsWith('0x')) {
         lotteryHash = '0x' + lotteryHash;
@@ -406,6 +412,9 @@ async function getLottery(lotteryHash) {
     return lottery;
 }
 
+/*********************/
+/*  USER LOTTERIES   */
+/*********************/
 async function getUserLotteries(address) {
     let lotteries;
     try {
@@ -477,6 +486,15 @@ async function refreshUserLotteries() {
 
 
 }
+
+/********************/
+/*  SEARCH LOTTERY  */
+/********************/
+async function searchLottery() {
+    const lotteryHash = document.querySelector('#lottery-hash').value;
+    doSearchLottery(lotteryHash);
+}
+
 
 async function doSearchLottery(lotteryHash) {
     showDialog({
@@ -557,6 +575,9 @@ async function doSearchLottery(lotteryHash) {
     });
 }
 
+/********************/
+/*  CANCEL LOTTERY  */
+/********************/
 async function cancelLottery(lottery) {
     showDialog({
         title: 'Are you sure?',
@@ -615,6 +636,20 @@ async function doCancelLottery(lottery) {
         });
 }
 
+async function cancelLotteryTransaction(hash) {
+    const cancelLotteryABI = contract.methods.cancelLottery(hash).encodeABI();
+    const transaction = {
+        from: currentAddress,
+        to: contractAddress,
+        value: 0,
+        data: cancelLotteryABI,
+    };
+    return transaction;
+}
+
+/********************/
+/*  SELECT WINNER   */
+/********************/
 async function selectWinner(lottery) {
     showDialog({
         title: 'Selecting winner...',
@@ -671,6 +706,38 @@ async function selectWinner(lottery) {
         });
 }
 
+async function selectWinnerTransaction(hash) {
+    const selectWinnerABI = contract.methods.selectWinner(hash).encodeABI();
+    const transaction = {
+        from: currentAddress,
+        to: contractAddress,
+        value: 0,
+        data: selectWinnerABI,
+    };
+    return transaction;
+}
+
+async function getWinnerInfoFromReceipt(receipt) {
+    const logs = receipt.logs;
+    for (let i = 0; i < logs.length; i++) {
+        const log = logs[i];
+        try {
+            const decodedLogs = web3.eth.abi.decodeLog(contractJsonInterface[2].inputs, log.data, log.topics);
+            if (decodedLogs.lotteryHash !== undefined && decodedLogs.winner !== undefined) {
+                console.log(decodedLogs.winner);
+                console.log(decodedLogs.prize);
+                return { winner: decodedLogs.winner, prize: decodedLogs.prize };
+            }
+        } catch (error) { // The error is thrown when the log is not a LotteryEnded event, but a LotteryCancelled event
+            return null;
+        }
+        throw new Error("No winner found in the transaction receipt");
+    }
+}
+
+/******************/
+/*  BUY TICKETS   */
+/******************/
 async function buyTickets(lottery, tickets) {
     let value;
     try {
@@ -740,17 +807,6 @@ async function doBuyTickets(lotteryHash, tickets, value) {
         });
 }
 
-async function selectWinnerTransaction(hash) {
-    const selectWinnerABI = contract.methods.selectWinner(hash).encodeABI();
-    const transaction = {
-        from: currentAddress,
-        to: contractAddress,
-        value: 0,
-        data: selectWinnerABI,
-    };
-    return transaction;
-}
-
 async function buyTicketsTransaction(lotteryHash, tickets, value) {
     const buyTicketsABI = contract.methods.buyTickets(lotteryHash, tickets).encodeABI();
     const transaction = {
@@ -762,29 +818,46 @@ async function buyTicketsTransaction(lotteryHash, tickets, value) {
     return transaction;
 }
 
-async function createLotteryTransaction(ticketPrice, duration) {
-    const createLotteryABI = contract.methods.createLottery(ticketPrice, duration).encodeABI();
-    const transaction = {
-        from: currentAddress,
-        to: contractAddress,
-        value: 0,
-        data: createLotteryABI,
-    };
-    return transaction;
+/**********************/
+/*  CREATE LOTTERY    */
+/**********************/
+async function createLottery() {
+    let ticketPrice;
+    let duration;
+    let endTime;
+    try {
+        ticketPrice = getTicketPrice();
+        endTime = getEndtime().unix;
+        duration = endTime - getNow().unix;
+    } catch (error) {
+        showDialog({
+            title: 'Error',
+            message: error.message,
+            closable: true,
+        });
+        return;
+    }
+    showDialog({
+        title: 'Are you sure?',
+        message: `Do you confirm the creation of this lottery?</br><strong>Ticket price:</strong> ${ticketPrice.eth} ETH</br><strong>End time:</strong> ${getEndtime().date.toLocaleString()}`,
+        buttons: [
+            {
+                text: 'Confirm',
+                action: () => {
+                    doCreateLottery(ticketPrice.wei, duration);
+                },
+                focus: true,
+            },
+            {
+                text: 'Cancel',
+                action: closeDialog,
+            },
+        ],
+        closable: true,
+    });
 }
 
-async function cancelLotteryTransaction(hash) {
-    const cancelLotteryABI = contract.methods.cancelLottery(hash).encodeABI();
-    const transaction = {
-        from: currentAddress,
-        to: contractAddress,
-        value: 0,
-        data: cancelLotteryABI,
-    };
-    return transaction;
-}
-
-async function createLottery(ticketPrice, duration) {
+async function doCreateLottery(ticketPrice, duration) {
     showDialog({
         title: 'Creating lottery...',
         message: 'Please wait while the lottery is being created...',
@@ -815,21 +888,15 @@ async function createLottery(ticketPrice, duration) {
         });
 }
 
-async function getTransactionReceipt(txHash) {
-    let receipt;
-    try {
-        receipt = await web3.eth.getTransactionReceipt(txHash);
-    } catch (error) { }
-    if (receipt === null || receipt === undefined) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                resolve(getTransactionReceipt(txHash));
-                console.log("Waiting for transaction confirmation");
-            }, 1000);
-        });
-    } else {
-        return receipt;
-    }
+async function createLotteryTransaction(ticketPrice, duration) {
+    const createLotteryABI = contract.methods.createLottery(ticketPrice, duration).encodeABI();
+    const transaction = {
+        from: currentAddress,
+        to: contractAddress,
+        value: 0,
+        data: createLotteryABI,
+    };
+    return transaction;
 }
 
 async function getLotteryHashFromReceipt(receipt) {
@@ -846,21 +913,23 @@ async function getLotteryHashFromReceipt(receipt) {
     }
 }
 
-async function getWinnerInfoFromReceipt(receipt) {
-    const logs = receipt.logs;
-    for (let i = 0; i < logs.length; i++) {
-        const log = logs[i];
-        try {
-            const decodedLogs = web3.eth.abi.decodeLog(contractJsonInterface[2].inputs, log.data, log.topics);
-            if (decodedLogs.lotteryHash !== undefined && decodedLogs.winner !== undefined) {
-                console.log(decodedLogs.winner);
-                console.log(decodedLogs.prize);
-                return { winner: decodedLogs.winner, prize: decodedLogs.prize };
-            }
-        } catch (error) { // The error is thrown when the log is not a LotteryEnded event, but a LotteryCancelled event
-            return null;
-        }
-        throw new Error("No winner found in the transaction receipt");
+/************/
+/*  UTILS   */
+/************/
+async function getTransactionReceipt(txHash) {
+    let receipt;
+    try {
+        receipt = await web3.eth.getTransactionReceipt(txHash);
+    } catch (error) { }
+    if (receipt === null || receipt === undefined) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                resolve(getTransactionReceipt(txHash));
+                console.log("Waiting for transaction confirmation");
+            }, 1000);
+        });
+    } else {
+        return receipt;
     }
 }
 
@@ -890,7 +959,6 @@ function show(shown, hidden) {
 
     return false;
 }
-
 
 function showDialog(options) {
     const dialog = document.querySelector('#dialog');
@@ -1063,16 +1131,16 @@ async function refreshLotteries() {
     }, 1000);
 }
 
-async function searchLottery() {
-    const lotteryHash = document.querySelector('#lottery-hash').value;
-    doSearchLottery(lotteryHash);
-}
-
+/**********************/
+/*  EVENT LISTENERS   */
+/**********************/
 document.querySelectorAll('.copy-button').forEach(button => button.onclick = (event) => copyData(event.target));
 document.querySelectorAll('#address-button').forEach(button => button.addEventListener('mouseenter', () => {
     const tooltip = document.querySelector('#address-tooltip');
     tooltip.textContent = 'Copy to clipboard';
 }));
+
+document.querySelectorAll('.etherscan').forEach(a => a.setAttribute('href', `https://sepolia.etherscan.io/address/${contractAddress}`));
 
 document.querySelector('#created-lotteries-button').addEventListener('click', async () => {
     await refreshUserLotteries();
@@ -1090,38 +1158,4 @@ document.querySelector('#entered-lotteries-button').addEventListener('click', as
 
 document.querySelector('#search-lottery-button').addEventListener('click', searchLottery);
 
-document.querySelector('#create-lottery-button').addEventListener('click', () => {
-    let ticketPrice;
-    let duration;
-    let endTime;
-    try {
-        ticketPrice = getTicketPrice();
-        endTime = getEndtime().unix;
-        duration = endTime - getNow().unix;
-    } catch (error) {
-        showDialog({
-            title: 'Error',
-            message: error.message,
-            closable: true,
-        });
-        return;
-    }
-    showDialog({
-        title: 'Are you sure?',
-        message: `Do you confirm the creation of this lottery?</br><strong>Ticket price:</strong> ${ticketPrice.eth} ETH</br><strong>End time:</strong> ${getEndtime().date.toLocaleString()}`,
-        buttons: [
-            {
-                text: 'Confirm',
-                action: () => {
-                    createLottery(ticketPrice.wei, duration);
-                },
-                focus: true,
-            },
-            {
-                text: 'Cancel',
-                action: closeDialog,
-            },
-        ],
-        closable: true,
-    });
-});
+document.querySelector('#create-lottery-button').addEventListener('click', createLottery);
