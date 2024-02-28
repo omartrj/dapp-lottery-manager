@@ -12,7 +12,7 @@ ethereum.on('accountsChanged', function (accounts) {
 });
 
 
-const contractAddress = "0x34Ea18575951DD6cFfE02F60e5EdD924a52dA5B0";
+const contractAddress = "0x70D7C0F6f1E95abBC600cfA037c0479aF85E7f05";
 const contractJsonInterface = [
     {
         "anonymous": false,
