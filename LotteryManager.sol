@@ -45,10 +45,10 @@ contract LotteryManager {
     }
 
     /// @notice The state of a lottery
-    /// @dev OPEN: The lottery is open and players can buy tickets
+    /// @dev ACTIVE: The initial state of the lottery
     ///      ENDED: The lottery is over and a winner has been selected
     ///      CANCELLED: The lottery has been cancelled and players have been refunded
-    enum State {OPEN, ENDED, CANCELLED}
+    enum State {ACTIVE, ENDED, CANCELLED}
 
     /// @notice All the lotteries created
     /// @dev The key is the hash of the lottery
@@ -60,7 +60,7 @@ contract LotteryManager {
 
     /// @notice Lotteries created and entered by an address
     /// @dev The key is the address of the user
-    mapping(address => LotteryList) userLotteries;
+    mapping(address => LotteryList) private userLotteries;
 
     /// @notice The nonce used to generate random numbers
     /// @dev The nonce is incremented every time a external function is called
@@ -97,7 +97,7 @@ contract LotteryManager {
             prizePool: 0,
             startTimestamp: block.timestamp,
             endTimestamp: block.timestamp + _duration,
-            state: State.OPEN,
+            state: State.ACTIVE,
             winner: address(0)
         });
 
@@ -110,11 +110,9 @@ contract LotteryManager {
     /// @notice Buys tickets for a lottery
     /// @param _lotteryHash The hash of the lottery
     /// @param _tickets The number of tickets to buy
-    function buyTickets(bytes32 _lotteryHash, uint8 _tickets) external payable {
+    function buyTickets(bytes32 _lotteryHash, uint8 _tickets) external payable lotteryOpen(_lotteryHash) {
         require(_tickets > 0, "Number of tickets must be greater than 0");
         require(lotteries[_lotteryHash].manager != address(0), "This lottery does not exist");
-        require(lotteries[_lotteryHash].state == State.OPEN, "Lottery is not open");
-        require(block.timestamp < lotteries[_lotteryHash].endTimestamp, "Lottery is over");
         require(msg.value == lotteries[_lotteryHash].ticketPrice * _tickets, "Incorrect amount of ether sent");
 
         lotteries[_lotteryHash].ticketCount += _tickets;
@@ -133,10 +131,8 @@ contract LotteryManager {
 
     /// @notice Ends a lottery and selects a winner
     /// @param _lotteryHash The hash of the lottery
-    function selectWinner(bytes32 _lotteryHash) external {
-        require(lotteries[_lotteryHash].manager != address(0), "This lottery does not exist");
-        require(lotteries[_lotteryHash].state == State.OPEN, "Lottery is not open");
-        require(block.timestamp >= lotteries[_lotteryHash].endTimestamp, "Lottery hasn't ended yet");
+    function selectWinner(bytes32 _lotteryHash) external onlyManager(_lotteryHash) lotteryClosed(_lotteryHash) {
+        require(lotteries[_lotteryHash].manager != address(0), "This lottery does not exist");  
 
         //If no one bought tickets, the lottery is cancelled
         if (lotteries[_lotteryHash].ticketCount == 0) {
@@ -170,10 +166,8 @@ contract LotteryManager {
 
     /// @notice Cancels a lottery
     /// @param _lotteryHash The hash of the lottery
-    function cancelLottery(bytes32 _lotteryHash) external {
+    function cancelLottery(bytes32 _lotteryHash) external onlyManager(_lotteryHash) onlyActive(_lotteryHash) {
         require(lotteries[_lotteryHash].manager != address(0), "This lottery does not exist");
-        require(lotteries[_lotteryHash].manager == msg.sender, "You are not the manager of this lottery");
-        require(lotteries[_lotteryHash].state == State.OPEN, "Lottery is not open");
 
         lotteries[_lotteryHash].state = State.CANCELLED;
 
@@ -213,6 +207,13 @@ contract LotteryManager {
         return lotteries[_lotteryHash];
     }      
 
+    /// @notice Returns the players of a lottery
+    /// @param _lotteryHash The hash of the lottery
+    /// @return players The players of the lottery
+    function getPlayers(bytes32 _lotteryHash) external view returns (Player[] memory) {
+        return players[_lotteryHash];
+    }
+
     /// @notice Computes the hash of a lottery using SHA-256
     /// @param _manager The manager of the lottery
     /// @param _ticketPrice The price of a ticket
@@ -251,9 +252,42 @@ contract LotteryManager {
         return uint256(keccak256(abi.encodePacked(block.timestamp, nonce, msg.sender)));
     }
 
+    /// @notice Modifier to check if the sender is the manager of a lottery
+    /// @param _lotteryHash The hash of the lottery
+    modifier onlyManager(bytes32 _lotteryHash) {
+        require(lotteries[_lotteryHash].manager == msg.sender, "You are not the manager of this lottery");
+        _;
+    }
 
+    /// @notice Modifier to check if a lottery is active
+    /// @param _lotteryHash The hash of the lottery
+    modifier onlyActive(bytes32 _lotteryHash) {
+        require(lotteries[_lotteryHash].state == State.ACTIVE, "Lottery is not active");
+        _;
+    }
 
+    /// @notice Modifier to check if a lottery is open
+    /// @param _lotteryHash The hash of the lottery
+    /// @dev A lottery is open if the current timestamp is less than the end timestamp and the state is ACTIVE
+    modifier lotteryOpen(bytes32 _lotteryHash) {
+        require(
+            block.timestamp < lotteries[_lotteryHash].endTimestamp &&
+            lotteries[_lotteryHash].state == State.ACTIVE,
+            "Lottery is closed"
+        );
+        _;
+    }
 
-
+    /// @notice Modifier to check if a lottery is closed
+    /// @param _lotteryHash The hash of the lottery
+    /// @dev A lottery is closed if the current timestamp is greater than or equal to the end timestamp and the state is ACTIVE
+    modifier lotteryClosed(bytes32 _lotteryHash) {
+        require(
+            block.timestamp >= lotteries[_lotteryHash].endTimestamp &&
+            lotteries[_lotteryHash].state == State.ACTIVE,
+            "Lottery is still open"
+        );
+        _;
+    }
 
 }

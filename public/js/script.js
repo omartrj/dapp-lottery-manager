@@ -762,11 +762,11 @@ function durationReadable(duration) {
 }
 
 function getState(lottery) {
-    let active = lottery.endTimestamp > Math.floor(Date.now() / 1000);
-    if (lottery.state === 0n && active) {
+    let afterEndtime = lottery.endTimestamp > Math.floor(Date.now() / 1000);
+    if (lottery.state === 0n && afterEndtime) {
         return 'OPEN';
     }
-    if (lottery.state === 0n && !active) {
+    if (lottery.state === 0n && !afterEndtime) {
         return 'CLOSED';
     }
     if (lottery.state === 1n) {

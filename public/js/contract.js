@@ -1,4 +1,4 @@
-const contractAddress = "0x70D7C0F6f1E95abBC600cfA037c0479aF85E7f05";
+const contractAddress = "0x8A76864045Fed171696Ed3216F54fbF7fa59f4E0";
 const contractJsonInterface = [
     {
         "anonymous": false,
@@ -192,6 +192,37 @@ const contractJsonInterface = [
                 "internalType": "struct LotteryManager.Lottery",
                 "name": "",
                 "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "_lotteryHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "getPlayers",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "addr",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "tickets",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct LotteryManager.Player[]",
+                "name": "",
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",
