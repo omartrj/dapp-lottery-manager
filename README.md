@@ -145,8 +145,8 @@ Returns the lotteries created and entered by an address
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| created | struct LotteryManager.Lottery[] | The lotteries created by the user |
-| entered | struct LotteryManager.Lottery[] | The lotteries entered by the user |
+| created | struct Lottery[] | The lotteries created by the user |
+| entered | struct Lottery[] | The lotteries entered by the user |
 
 ### getLottery
 
@@ -166,7 +166,7 @@ Returns the details of a lottery
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | struct LotteryManager.Lottery | lottery The details of the lottery |
+| lottery | struct Lottery | lottery The details of the lottery |
 
 ### getPlayers
 
@@ -186,7 +186,7 @@ Returns the players of a lottery
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | struct LotteryManager.Player[] | players The players of the lottery |
+| players | struct Player[] | players The players of the lottery |
 
  --- 
 ## Events:
