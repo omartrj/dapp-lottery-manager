@@ -807,7 +807,6 @@ document.querySelectorAll('#address-button').forEach(button => button.addEventLi
     tooltip.textContent = 'Copy to clipboard';
 }));
 
-document.querySelectorAll('.etherscan').forEach(a => a.setAttribute('href', `https://sepolia.etherscan.io/address/${contractAddress}`));
 document.querySelector('#created-lotteries-button').addEventListener('click', async () => {
     await refreshUserLotteries();
     show('created-lottery-list', 'entered-lottery-list');

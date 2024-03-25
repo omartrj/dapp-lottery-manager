@@ -3,7 +3,7 @@
 A lottery dApp that allows users to create and manage lotteries. Users can also buy more than one ticket for as many lotteries as they want. The winner is selected randomly and receives 90% of the prize pool, the manager receives the rest.
 
 ## Contract
-LotteryManager : LotteryManager.sol
+LotteryManager : contracts/LotteryManager.sol
 
  --- 
 ## Modifiers:
